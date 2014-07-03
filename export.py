@@ -7,12 +7,14 @@ Created on 18 Aug 2013
 
 from PIL import Image, ImageDraw, ImageFont
 from shape import FILLED
+import math
 
 IMAGE_VOXEL_SIZE = 10
 
 EMPTY_COLOR = (255, 255, 255)
 FILLED_COLOR = (255, 0, 0)
 HINT_COLOR = (0, 0, 255)
+CENTER_COLOR = (255, 255, 0)
 TEXT_COLOR = (0, 0, 0)
 COLOR_OFFSET = 24
 
@@ -31,13 +33,18 @@ class ExportToImage:
     def image(self, shape, start, end):
         '''Initialises the image to draw, needs to be called first
 
-        data - the data that defines the 3D shape
+        shape - the data that defines the 3D shape
         start - the first layer to draw
         end - the last layer to draw'''
         # Information about shape that has been generated
         self.shape = shape
         self.start = start
         self.end = end
+        # determine the center layers (for the entire shape)
+        if self.shape.height % 2 == 0:
+            self.center = [self.shape.height / 2, self.shape.height / 2 - 1]
+        else:
+            self.center = [math.floor(self.shape.height / 2)]
 
         # Text for in the image (done before the image because the image size depends on the font and text size)
         self.font = ImageFont.load_default()
@@ -45,21 +52,28 @@ class ExportToImage:
         self.height_offset = self.info_text.size[1] # text height
 
         # Create image
-        self.img = Image.new('RGB', (self.shape.width * IMAGE_VOXEL_SIZE,
+        self.img = Image.new('RGB', (max(self.shape.width * IMAGE_VOXEL_SIZE, self.info_text.size[0]),
                                      self.shape.depth * (self.end - self.start) * IMAGE_VOXEL_SIZE + self.height_offset), None)
         self.draw = ImageDraw.Draw(self.img)
 
     def text_info(self):
+        lines = ["width (x):   " + str(self.shape.width),
+            "height (y):  " + str(self.shape.height),
+            "depth (z):   " + str(self.shape.depth),
+            "block total: " + str(self.shape.count_blocks(self.start, self.end))]
         # receive char size and create a seperate image based on this
-        char_width, char_height = self.font.getsize("M")
-        text_image = Image.new('RGB', (self.shape.width * IMAGE_VOXEL_SIZE, 4 * char_height+1), EMPTY_COLOR) # 4 = amount of lines
+        line_width = 0
+        char_height = 0
+        for l in lines:
+            width, char_height = self.font.getsize(l)
+            if width > line_width:
+                line_width = width
+        text_image = Image.new('RGB', (max(line_width+1, self.shape.width * IMAGE_VOXEL_SIZE), len(lines) * char_height + 1), EMPTY_COLOR)
         text_draw = ImageDraw.Draw(text_image)
 
         # draw the text
-        text_draw.text((1, 1),             "width (x):  " + str(self.shape.width),  font=self.font, fill=TEXT_COLOR)
-        text_draw.text((1, 1+char_height),   "height (y): " + str(self.shape.height), font=self.font, fill=TEXT_COLOR)
-        text_draw.text((1, 1+2*char_height), "depth (z):  " + str(self.shape.depth),  font=self.font, fill=TEXT_COLOR)
-        text_draw.text((1, 1+3*char_height), "blocks:     " + str(self.shape.count_blocks(self.start, self.end)), font=self.font, fill=TEXT_COLOR)
+        for i in range(len(lines)):
+            text_draw.text((1, 1 + i * char_height), lines[i], TEXT_COLOR, self.font)
         return text_image
 
     def write(self, filename, hint=True):
@@ -75,8 +89,9 @@ class ExportToImage:
         for z in range(self.end-self.start):
             self.draw_layer(z)
             # draw layer number
-            self.draw.text((1, z * self.shape.depth * IMAGE_VOXEL_SIZE + self.height_offset), str(z), fill=TEXT_COLOR, font=self.font)
+            self.draw.text((1, z * self.shape.depth * IMAGE_VOXEL_SIZE + self.height_offset), str(z + self.start), fill=TEXT_COLOR, font=self.font)
 
+        # add the info text to the image
         self.img.paste(self.info_text, (0, 0, self.info_text.size[0], self.info_text.size[1]))
 
         self.img.save(filename)
@@ -111,9 +126,13 @@ class ExportToImage:
             raise IllegalStateError()
         #Start drawing
         for z in range(self.end-self.start):
+            if z + self.start in self.center:
+                color = CENTER_COLOR
+            else:
+                color = EMPTY_COLOR
             for y in range(self.shape.depth):
                 for x in range(self.shape.width):
-                    self.draw_to_image(self._image_coordinates(x, y, z), self._get_color(x, y, z, EMPTY_COLOR))
+                    self.draw_to_image(self._image_coordinates(x, y, z), self._get_color(x, y, z, color))
 
     def draw_layer(self, layer):
         for x in range(self.shape.width):

@@ -15,7 +15,7 @@ def main(argv):
     parser.add_argument('-l', '--end', '--last', type=int, metavar='E', default=None, help='The last layer of the output (default: HEIGHT)')
     parser.add_argument('--voxel', type=int, help='The size of one voxel in the image')
     parser.add_argument('-o', '--hollow', action='store_true', default=False, help='Make the cone hollow')
-    parser.add_argument('--hint', action='store_false', default=True, help='Turn of the display of hints in the image')
+    parser.add_argument('--hint', '-i', action='store_false', default=True, help='Turn of the display of hints in the image')
     parser.add_argument('-f', '--flip', action='store_true', default=False, help='Flip the shape onto its side')
     args = vars(parser.parse_args(argv))
 
