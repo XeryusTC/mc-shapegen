@@ -6,7 +6,7 @@ Created on 18 Aug 2013
 #!/usr/bin/python3
 
 from PIL import Image, ImageDraw, ImageFont
-from shape import FILLED
+from shape import FILLED, Shape
 import math
 
 IMAGE_VOXEL_SIZE = 10
@@ -151,5 +151,7 @@ class ExportToImage:
 if __name__ == '__main__':
     print('This is a helper file and it should not be called directly')
     img = ExportToImage()
-    img.image([[[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]], [[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]]], 0, 3)
+    s = Shape(2, 3, 3)
+    s.shape = [[[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]], [[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]]]
+    img.image(s, 0, 3)
     img.write('test2.png')
